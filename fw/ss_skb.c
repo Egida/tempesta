@@ -1024,6 +1024,8 @@ ss_skb_list_chop_head_tail(struct sk_buff **skb_list_head,
 	size_t sum;
 	int ret;
 
+printk("Entered ss_skb_list_chop_head_tail( , , %d, %d)\n", (int)head, (int)trail);
+
 	skb_hd = *skb_list_head;
 	if (unlikely(skb_hd->next != skb_hd))
 		goto multi_buffs;
@@ -1035,19 +1037,28 @@ ss_skb_list_chop_head_tail(struct sk_buff **skb_list_head,
 	 */
 
 single_buff:
+	printk("entered single_buff:\n");
 	/* There is the only 1 buffer in the list
 	 * and skb_hd points to it
 	 */
 	sum = head + trail;
 	if (WARN_ON_ONCE(skb_hd->len <= sum))
+	{
+		printk("return -EINVAL\n");
 		return -EINVAL;
+	}
 	if (unlikely(sum == 0))
 		/* Nothing to chop */
 		/* This check is mostly for jumps from branches below */
+	{
+		printk("return 0\n");
 		return 0;
+	}
+	printk("running ss_skb_chop_head_tail(, , %d, %d)\n", (int)head, (int)trail);
 	return ss_skb_chop_head_tail(NULL, skb_hd, head, trail);
 
 multi_buffs:
+	printk("entered multi_buffs:\n");
 	/* skb_list contains more than 1 skb &&
 	 * skb_hd points to head element of the list
 	 */
@@ -1058,6 +1069,7 @@ multi_buffs:
 	 */
 	skb = skb_hd;
 	while (unlikely(skb->len <= head)) {
+		printk("deleting leading skb len=%d\n", (int)skb->len);
 		head -= skb->len;
 		/* We do not use ss_skb_unlink() here and in
 		 * the similar loop for tail below to prevent
@@ -1083,6 +1095,7 @@ multi_buffs:
 	 */
 	skb = skb_hd->prev;
 	while (unlikely(skb->len <= trail)) {
+		printk("deleting trailing skb len=%d\n", (int)skb->len);
 		trail -= skb->len;
 		skb_hd->prev = skb->prev;
 		skb->prev->next = skb_hd;
@@ -1099,13 +1112,17 @@ multi_buffs:
 
 	/* Here we remove remaining head and trail bytes, if any */
 	if (likely(head)) {
+		printk("running ss_skb_chop_head_tail(, , %d, =0)\n", (int)head);
 		ret = ss_skb_chop_head_tail(NULL, skb_hd, head, 0);
 		if (unlikely(ret))
 			return ret;
 	}
-	if (likely(trail))
+	if (likely(trail)) {
+		printk("running ss_skb_chop_head_tail(, , =0, %d)\n", (int)trail);
 		return ss_skb_chop_head_tail(NULL, skb, 0, trail);
+	}
 
+	printk("return 0\n");
 	return 0;
 }
 
